@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Inventario % · Repsol</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  /* ── REPSOL THEME TOKENS ───────────────────────── */
+  :root {
+    --navy:    #001E37;
+    --crimson: #E50052;
+    --amber:   #FFAF19;
+    --orange:  #FA590A;
+    --bg:      #FFFFFF;
+    --page-bg: #F4F4F4;
+    --grid:    #DBE6F0;
+    --muted:   #AAAAAA;
+    --text:    #001E37;
+    --font:    Arial, sans-serif;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--page-bg);
+    color: var(--text);
+    font-family: var(--font);
+    font-size: 12px;
+    padding: 16px;
+    min-height: 100vh;
+  }
+
+  /* ── CARD ──────────────────────────────────────── */
+  .card {
+    background: var(--bg);
+    border-radius: 4px;
+    padding: 16px 20px 12px;
+    box-shadow: 0 1px 4px rgba(0,30,55,.10);
+  }
+
+  /* ── HEADER ────────────────────────────────────── */
+  .card-hdr {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    margin-bottom: 4px;
+  }
+  .card-title {
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--navy);
+    letter-spacing: .3px;
+    text-transform: uppercase;
+  }
+  .card-sub {
+    font-size: 9px;
+    color: var(--muted);
+    margin-top: 2px;
+  }
+  .badge {
+    font-size: 9px;
+    font-weight: 700;
+    padding: 3px 8px;
+    border-radius: 2px;
+    background: #F4F4F4;
+    color: var(--navy);
+    border: 1px solid var(--grid);
+    white-space: nowrap;
+  }
+
+  /* ── LEGEND CUSTOM ─────────────────────────────── */
+  .legend {
+    display: flex;
+    gap: 18px;
+    margin: 8px 0 10px;
+    flex-wrap: wrap;
+  }
+  .leg-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 8px;
+    color: var(--navy);
+  }
+  .leg-line {
+    width: 22px;
+    height: 3px;
+    border-radius: 2px;
+    flex-shrink: 0;
+  }
+  .leg-line.dashed {
+    background: repeating-linear-gradient(
+      to right,
+      var(--color) 0, var(--color) 5px,
+      transparent 5px, transparent 9px
+    );
+    height: 2px;
+  }
+
+  /* ── TOOLTIP CUSTOM ────────────────────────────── */
+  #tooltip-box {
+    position: absolute;
+    background: var(--navy);
+    color: #fff;
+    border-radius: 3px;
+    padding: 7px 10px;
+    font-family: var(--font);
+    font-size: 10px;
+    pointer-events: none;
+    display: none;
+    min-width: 160px;
+    z-index: 10;
+    box-shadow: 0 2px 8px rgba(0,0,0,.25);
+  }
+  #tooltip-box .tt-fecha {
+    font-size: 9px;
+    color: var(--muted);
+    margin-bottom: 5px;
+    border-bottom: 1px solid rgba(255,255,255,.15);
+    padding-bottom: 4px;
+  }
+  #tooltip-box .tt-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 3px;
+  }
+  #tooltip-box .tt-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  #tooltip-box .tt-label { flex: 1; font-size: 9px; }
+  #tooltip-box .tt-val   { font-weight: 700; font-size: 10px; }
+
+  /* ── CHART WRAP ────────────────────────────────── */
+  .chart-wrap {
+    position: relative;
+    height: 360px;
+  }
+
+  /* ── RESPONSIVE ────────────────────────────────── */
+  @media (max-width: 768px) {
+    body { padding: 10px; }
+    .chart-wrap { height: 300px; }
+    .legend { gap: 10px; }
+  }
+  @media (max-width: 480px) {
+    body { padding: 8px; }
+    .card { padding: 12px 12px 10px; }
+    .chart-wrap { height: 260px; }
+    .card-title { font-size: 9px; }
+    .footer { flex-direction: column; gap: 2px; }
+  }
+
+  /* ── FOOTER ────────────────────────────────────── */
+  .footer {
+    margin-top: 10px;
+    font-size: 8px;
+    color: var(--muted);
+    display: flex;
+    justify-content: space-between;
+  }
+</style>
+</head>
+<body>
+
+<!-- ══════════════════════════════════════════════
+     ZONA DE INYECCIÓN — POWER APPS
+     Power Apps reemplaza window.PA_DATA con el
+     JSON generado desde la colección colInventario
+     Ver manual de integración para la fórmula exacta
+══════════════════════════════════════════════ -->
+<script>
+window.PA_DATA = [{"fecha":"01/01/2026","contrato":90.0,"reportado":125.42,"promedio":121.16},{"fecha":"02/01/2026","contrato":90.0,"reportado":125.68,"promedio":121.16},{"fecha":"03/01/2026","contrato":90.0,"reportado":125.14,"promedio":121.16},{"fecha":"04/01/2026","contrato":90.0,"reportado":123.63,"promedio":121.16},{"fecha":"05/01/2026","contrato":90.0,"reportado":121.18,"promedio":121.16},{"fecha":"06/01/2026","contrato":90.0,"reportado":122.82,"promedio":121.16},{"fecha":"07/01/2026","contrato":90.0,"reportado":119.45,"promedio":121.16},{"fecha":"08/01/2026","contrato":90.0,"reportado":115.69,"promedio":121.16},{"fecha":"09/01/2026","contrato":90.0,"reportado":115.68,"promedio":121.16},{"fecha":"10/01/2026","contrato":90.0,"reportado":115.9,"promedio":121.16},{"fecha":"11/01/2026","contrato":90.0,"reportado":116.48,"promedio":121.16},{"fecha":"12/01/2026","contrato":90.0,"reportado":114.81,"promedio":121.16},{"fecha":"13/01/2026","contrato":90.0,"reportado":118.02,"promedio":121.16},{"fecha":"14/01/2026","contrato":90.0,"reportado":117.01,"promedio":121.16},{"fecha":"15/01/2026","contrato":90.0,"reportado":116.65,"promedio":121.16},{"fecha":"16/01/2026","contrato":90.0,"reportado":118.21,"promedio":121.16},{"fecha":"17/01/2026","contrato":90.0,"reportado":118.53,"promedio":121.16},{"fecha":"18/01/2026","contrato":90.0,"reportado":117.01,"promedio":121.16},{"fecha":"19/01/2026","contrato":90.0,"reportado":118.59,"promedio":121.16},{"fecha":"20/01/2026","contrato":90.0,"reportado":119.83,"promedio":121.16},{"fecha":"21/01/2026","contrato":90.0,"reportado":120.93,"promedio":121.16},{"fecha":"22/01/2026","contrato":90.0,"reportado":121.82,"promedio":121.16},{"fecha":"23/01/2026","contrato":90.0,"reportado":121.27,"promedio":121.16},{"fecha":"24/01/2026","contrato":90.0,"reportado":122.18,"promedio":121.16},{"fecha":"25/01/2026","contrato":90.0,"reportado":122.89,"promedio":121.16},{"fecha":"26/01/2026","contrato":90.0,"reportado":124.12,"promedio":121.16},{"fecha":"27/01/2026","contrato":90.0,"reportado":124.75,"promedio":121.16},{"fecha":"28/01/2026","contrato":90.0,"reportado":125.31,"promedio":121.16},{"fecha":"29/01/2026","contrato":90.0,"reportado":126.04,"promedio":121.16},{"fecha":"30/01/2026","contrato":90.0,"reportado":126.89,"promedio":121.16},{"fecha":"31/01/2026","contrato":90.0,"reportado":127.18,"promedio":121.16}];
+</script>
+
+<!-- ══════════════════════════════════════════════ -->
+
+<div class="card">
+
+  <div class="card-hdr">
+    <div>
+      <div class="card-title">Inventario en Porcentaje — Sitio A</div>
+      <div class="card-sub">% sobre capacidad instalada · enero 2026 · LMP contractual = 90%</div>
+    </div>
+    <span class="badge">% Cap.</span>
+  </div>
+
+  <div class="legend">
+    <div class="leg-item">
+      <div class="leg-line" style="background:#E50052"></div>
+      % Contrato (LMP)
+    </div>
+    <div class="leg-item">
+      <div class="leg-line" style="background:#FFAF19"></div>
+      % Reportado
+    </div>
+    <div class="leg-item">
+      <div class="leg-line dashed" style="--color:#FA590A"></div>
+      % Promedio
+    </div>
+  </div>
+
+  <div class="chart-wrap">
+    <canvas id="chartInv"></canvas>
+    <div id="tooltip-box">
+      <div class="tt-fecha" id="tt-fecha"></div>
+      <div class="tt-row">
+        <div class="tt-dot" style="background:#E50052"></div>
+        <span class="tt-label">% Contrato</span>
+        <span class="tt-val" id="tt-contrato"></span>
+      </div>
+      <div class="tt-row">
+        <div class="tt-dot" style="background:#FFAF19"></div>
+        <span class="tt-label">% Reportado</span>
+        <span class="tt-val" id="tt-reportado"></span>
+      </div>
+      <div class="tt-row">
+        <div class="tt-dot" style="background:#FA590A"></div>
+        <span class="tt-label">% Promedio</span>
+        <span class="tt-val" id="tt-promedio"></span>
+      </div>
+    </div>
+  </div>
+
+  <div class="footer">
+    <span>Fuente: Sistema de Inventarios · Abastecimiento Combustible</span>
+    <span>Ref: API MPMS Ch.11 · LMP — Low Mandatory Point</span>
+  </div>
+
+</div>
+
+<script>
+/* ── DATOS ──────────────────────────────────────── */
+const D = window.PA_DATA;
+
+/* ── CONFIG CHART.JS ────────────────────────────── */
+Chart.defaults.font.family = 'Arial, sans-serif';
+Chart.defaults.font.size   = 8;
+Chart.defaults.color       = '#001E37';
+
+const ctx = document.getElementById('chartInv');
+const wrap = ctx.parentElement;
+
+/* ── PLUGIN: crosshair vertical ─────────────────── */
+const crosshairPlugin = {
+  id: 'crosshair',
+  afterDraw(chart) {
+    if (chart._hoverX === undefined) return;
+    const { ctx: c, chartArea: { top, bottom } } = chart;
+    c.save();
+    c.setLineDash([4, 3]);
+    c.strokeStyle = '#AAAAAA';
+    c.lineWidth = 1;
+    c.beginPath();
+    c.moveTo(chart._hoverX, top);
+    c.lineTo(chart._hoverX, bottom);
+    c.stroke();
+    c.restore();
+  }
+};
+
+/* ── CHART ──────────────────────────────────────── */
+const chart = new Chart(ctx, {
+  type: 'line',
+  plugins: [crosshairPlugin],
+  data: {
+    labels: D.map(d => d.fecha),
+    datasets: [
+      {
+        label: '% Contrato',
+        data: D.map(d => d.contrato),
+        borderColor: '#E50052',
+        backgroundColor: 'rgba(229,0,82,.07)',
+        borderWidth: 2,
+        pointRadius: 0,
+        pointHoverRadius: 5,
+        pointHoverBackgroundColor: '#E50052',
+        pointHoverBorderColor: '#fff',
+        pointHoverBorderWidth: 2,
+        fill: false,
+        tension: 0,
+      },
+      {
+        label: '% Reportado',
+        data: D.map(d => d.reportado),
+        borderColor: '#FFAF19',
+        backgroundColor: 'rgba(255,175,25,.08)',
+        borderWidth: 2,
+        pointRadius: 0,
+        pointHoverRadius: 5,
+        pointHoverBackgroundColor: '#FFAF19',
+        pointHoverBorderColor: '#fff',
+        pointHoverBorderWidth: 2,
+        fill: false,
+        tension: 0.25,
+      },
+      {
+        label: '% Promedio',
+        data: D.map(d => d.promedio),
+        borderColor: '#FA590A',
+        backgroundColor: 'transparent',
+        borderWidth: 2,
+        borderDash: [6, 4],
+        pointRadius: 0,
+        pointHoverRadius: 5,
+        pointHoverBackgroundColor: '#FA590A',
+        pointHoverBorderColor: '#fff',
+        pointHoverBorderWidth: 2,
+        fill: false,
+        tension: 0,
+      },
+    ]
+  },
+  options: {
+    responsive: true,
+    maintainAspectRatio: false,
+    interaction: { mode: 'index', intersect: false },
+    plugins: {
+      legend: { display: false },   /* usa leyenda custom */
+      tooltip: { enabled: false },  /* tooltip custom via mousemove */
+    },
+    scales: {
+      x: {
+        grid: { display: false },
+        border: { color: '#001E37', width: 1 },
+        ticks: {
+          font: { family: 'Arial', size: 8 },
+          color: '#001E37',
+          maxRotation: 60,
+          minRotation: 60,
+          autoSkip: true,
+          autoSkipPadding: 4,
+          maxTicksLimit: window.innerWidth < 480 ? 7 : window.innerWidth < 768 ? 16 : 31,
+        }
+      },
+      y: {
+        grid: {
+          color: '#DBE6F0',
+          lineWidth: 1,
+          drawBorder: false,
+        },
+        border: { color: '#001E37', width: 1, dash: [] },
+        ticks: {
+          font: { family: 'Arial', size: 8 },
+          color: '#001E37',
+          callback: v => v.toFixed(0) + '%',
+          maxTicksLimit: 7,
+        },
+        min: 80,
+      }
+    },
+    onHover(evt) {
+      if (!evt.native) return;
+      const pts = chart.getElementsAtEventForMode(
+        evt.native, 'index', { intersect: false }, false
+      );
+      if (!pts.length) {
+        document.getElementById('tooltip-box').style.display = 'none';
+        chart._hoverX = undefined;
+        chart.draw();
+        return;
+      }
+      const idx = pts[0].index;
+      const row = D[idx];
+      const tb  = document.getElementById('tooltip-box');
+
+      document.getElementById('tt-fecha').textContent    = row.fecha;
+      document.getElementById('tt-contrato').textContent = row.contrato.toFixed(2) + '%';
+      document.getElementById('tt-reportado').textContent= row.reportado.toFixed(2) + '%';
+      document.getElementById('tt-promedio').textContent = row.promedio.toFixed(2) + '%';
+
+      /* posición relativa al card */
+      const rect = wrap.getBoundingClientRect();
+      const ex   = evt.native.clientX - rect.left;
+      const ey   = evt.native.clientY - rect.top;
+      const tw   = tb.offsetWidth || 165;
+      const left = (ex + tw + 12 > wrap.offsetWidth) ? ex - tw - 8 : ex + 12;
+
+      tb.style.left    = left + 'px';
+      tb.style.top     = Math.max(0, ey - 30) + 'px';
+      tb.style.display = 'block';
+
+      chart._hoverX = chart.getDatasetMeta(0).data[idx]?.x;
+      chart.draw();
+    },
+  }
+});
+
+/* ocultar tooltip al salir */
+ctx.addEventListener('mouseleave', () => {
+  document.getElementById('tooltip-box').style.display = 'none';
+  chart._hoverX = undefined;
+  chart.draw();
+});
+</script>
+</body>
+</html>
