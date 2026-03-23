@@ -167,13 +167,33 @@
 <body>
 
 <!-- ══════════════════════════════════════════════
-     ZONA DE INYECCIÓN — POWER APPS
-     Power Apps reemplaza window.PA_DATA con el
-     JSON generado desde la colección colInventario
-     Ver manual de integración para la fórmula exacta
+     ZONA DE INYECCIÓN — POWER APPS (URL PARAMS)
+     Power Apps pasa los datos como parámetro ?data=
+     codificado con EncodeUrl(JSON(colInventario))
+
+     Fórmula Power Apps (propiedad URL del Web viewer):
+     ──────────────────────────────────────────────────
+     "[URL_SHAREPOINT]/repsol_inventario_pct.html?data="
+     & EncodeUrl(JSON(colInventario))
+
+     Si no hay parámetro ?data= se usan datos de ejemplo.
 ══════════════════════════════════════════════ -->
 <script>
-window.PA_DATA = [{"fecha":"01/01/2026","contrato":90.0,"reportado":125.42,"promedio":121.16},{"fecha":"02/01/2026","contrato":90.0,"reportado":125.68,"promedio":121.16},{"fecha":"03/01/2026","contrato":90.0,"reportado":125.14,"promedio":121.16},{"fecha":"04/01/2026","contrato":90.0,"reportado":123.63,"promedio":121.16},{"fecha":"05/01/2026","contrato":90.0,"reportado":121.18,"promedio":121.16},{"fecha":"06/01/2026","contrato":90.0,"reportado":122.82,"promedio":121.16},{"fecha":"07/01/2026","contrato":90.0,"reportado":119.45,"promedio":121.16},{"fecha":"08/01/2026","contrato":90.0,"reportado":115.69,"promedio":121.16},{"fecha":"09/01/2026","contrato":90.0,"reportado":115.68,"promedio":121.16},{"fecha":"10/01/2026","contrato":90.0,"reportado":115.9,"promedio":121.16},{"fecha":"11/01/2026","contrato":90.0,"reportado":116.48,"promedio":121.16},{"fecha":"12/01/2026","contrato":90.0,"reportado":114.81,"promedio":121.16},{"fecha":"13/01/2026","contrato":90.0,"reportado":118.02,"promedio":121.16},{"fecha":"14/01/2026","contrato":90.0,"reportado":117.01,"promedio":121.16},{"fecha":"15/01/2026","contrato":90.0,"reportado":116.65,"promedio":121.16},{"fecha":"16/01/2026","contrato":90.0,"reportado":118.21,"promedio":121.16},{"fecha":"17/01/2026","contrato":90.0,"reportado":118.53,"promedio":121.16},{"fecha":"18/01/2026","contrato":90.0,"reportado":117.01,"promedio":121.16},{"fecha":"19/01/2026","contrato":90.0,"reportado":118.59,"promedio":121.16},{"fecha":"20/01/2026","contrato":90.0,"reportado":119.83,"promedio":121.16},{"fecha":"21/01/2026","contrato":90.0,"reportado":120.93,"promedio":121.16},{"fecha":"22/01/2026","contrato":90.0,"reportado":121.82,"promedio":121.16},{"fecha":"23/01/2026","contrato":90.0,"reportado":121.27,"promedio":121.16},{"fecha":"24/01/2026","contrato":90.0,"reportado":122.18,"promedio":121.16},{"fecha":"25/01/2026","contrato":90.0,"reportado":122.89,"promedio":121.16},{"fecha":"26/01/2026","contrato":90.0,"reportado":124.12,"promedio":121.16},{"fecha":"27/01/2026","contrato":90.0,"reportado":124.75,"promedio":121.16},{"fecha":"28/01/2026","contrato":90.0,"reportado":125.31,"promedio":121.16},{"fecha":"29/01/2026","contrato":90.0,"reportado":126.04,"promedio":121.16},{"fecha":"30/01/2026","contrato":90.0,"reportado":126.89,"promedio":121.16},{"fecha":"31/01/2026","contrato":90.0,"reportado":127.18,"promedio":121.16}];
+(function () {
+  var fallback = [
+    {"fecha":"01/01/2026","contrato":90.0,"reportado":125.42,"promedio":121.16},
+    {"fecha":"15/01/2026","contrato":90.0,"reportado":116.65,"promedio":121.16},
+    {"fecha":"31/01/2026","contrato":90.0,"reportado":127.18,"promedio":121.16}
+  ];
+  try {
+    var params = new URLSearchParams(window.location.search);
+    var raw    = params.get('data');
+    window.PA_DATA = raw ? JSON.parse(decodeURIComponent(raw)) : fallback;
+  } catch (e) {
+    console.warn('PA_DATA parse error, usando fallback:', e);
+    window.PA_DATA = fallback;
+  }
+})();
 </script>
 
 <!-- ══════════════════════════════════════════════ -->
@@ -183,7 +203,7 @@ window.PA_DATA = [{"fecha":"01/01/2026","contrato":90.0,"reportado":125.42,"prom
   <div class="card-hdr">
     <div>
       <div class="card-title">Inventario en Porcentaje — Sitio A</div>
-      <div class="card-sub">% sobre capacidad instalada · enero 2026 · LMP contractual = 90%</div>
+      <div class="card-sub" id="card-sub">% sobre capacidad instalada · LMP contractual = 90%</div>
     </div>
     <span class="badge">% Cap.</span>
   </div>
@@ -235,6 +255,21 @@ window.PA_DATA = [{"fecha":"01/01/2026","contrato":90.0,"reportado":125.42,"prom
 <script>
 /* ── DATOS ──────────────────────────────────────── */
 const D = window.PA_DATA;
+
+/* ── SUBTÍTULO DINÁMICO ─────────────────────────── */
+(function() {
+  if (!D || !D.length) return;
+  const fechaInicio = D[0].fecha;
+  const fechaFin    = D[D.length - 1].fecha;
+  const meses = ['enero','febrero','marzo','abril','mayo','junio',
+                 'julio','agosto','septiembre','octubre','noviembre','diciembre'];
+  // Detecta mes y año desde primera fecha (formato dd/mm/yyyy)
+  const partes = fechaInicio.split('/');
+  const mes    = meses[parseInt(partes[1], 10) - 1];
+  const anio   = partes[2];
+  const sub    = document.getElementById('card-sub');
+  if (sub) sub.textContent = '% sobre capacidad instalada · ' + mes + ' ' + anio + ' · LMP contractual = 90%';
+})();
 
 /* ── CONFIG CHART.JS ────────────────────────────── */
 Chart.defaults.font.family = 'Arial, sans-serif';
